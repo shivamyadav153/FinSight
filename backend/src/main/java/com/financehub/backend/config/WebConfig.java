@@ -18,6 +18,7 @@ public class WebConfig {
 
         registry.addMapping("/**")
             .allowedOrigins(
+                "https://shivamyadav153.github.io",
                 "https://finsight-frontend-gf18.onrender.com",
                 "http://localhost:5173")
             .allowedMethods(
@@ -27,7 +28,8 @@ public class WebConfig {
                 "DELETE",
                 "OPTIONS")
             .allowedHeaders("*")
-            .allowCredentials(true);
+            .allowCredentials(true)
+            .maxAge(3600);
       }
     };
   }
