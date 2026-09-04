@@ -45,8 +45,8 @@ import {
   Legend,
 } from "recharts";
 
-//const API_URL = "https://finsight-mm3b.onrender.com/api";
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+const API_URL = "https://finsight-mm3b.onrender.com/api";
+//const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 
 /* =========================================================
    APP
@@ -405,6 +405,13 @@ function Dashboard({ user, onLogout }) {
       }
 
       const token = localStorage.getItem("financehub_token");
+      console.log("TOKEN:", token);
+      console.log("USER:", user);
+
+      if (!token) {
+        console.error("JWT token missing");
+        return;
+      }
 
       const response = await fetch(`${API_URL}/transactions`, {
         headers: {
