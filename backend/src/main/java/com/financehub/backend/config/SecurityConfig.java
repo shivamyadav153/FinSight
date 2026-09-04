@@ -43,6 +43,9 @@ public class SecurityConfig {
             // Login and Register are public
             .requestMatchers("/api/auth/**").permitAll()
 
+            // Health check is public
+            .requestMatchers("/api/health").permitAll()
+
             // Allow CORS preflight requests
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
