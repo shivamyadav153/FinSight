@@ -1,6 +1,10 @@
 package com.financehub.backend.entity;
 
 import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "users")
@@ -18,6 +22,10 @@ public class User {
 
   @Column(nullable = false)
   private String password;
+
+  @JsonIgnore
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+  private List<Transaction> transactions = new ArrayList<>();
 
   public User() {
   }
@@ -58,5 +66,13 @@ public class User {
 
   public void setPassword(String password) {
     this.password = password;
+  }
+
+  public List<Transaction> getTransactions() {
+    return transactions;
+  }
+
+  public void setTransactions(List<Transaction> transactions) {
+    this.transactions = transactions;
   }
 }

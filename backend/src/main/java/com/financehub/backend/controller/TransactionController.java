@@ -2,68 +2,90 @@ package com.financehub.backend.controller;
 
 import com.financehub.backend.entity.Transaction;
 import com.financehub.backend.service.TransactionService;
-
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/transactions")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "https://shivamyadav153.github.io"
+})
 public class TransactionController {
 
   private final TransactionService transactionService;
 
-  public TransactionController(
-      TransactionService transactionService) {
+  public TransactionController(TransactionService transactionService) {
     this.transactionService = transactionService;
   }
 
-  // GET ALL
+  // GET ALL TRANSACTIONS OF LOGGED-IN USER
   @GetMapping
-  public ResponseEntity<List<Transaction>> getAllTransactions() {
+  public ResponseEntity<List<Transaction>> getTransactions(
+      Authentication authentication) {
+
+    Long userId = (Long) authentication.getPrincipal();
 
     return ResponseEntity.ok(
-        transactionService.getAllTransactions());
+        transactionService.getTransactionsByUser(userId));
   }
 
-  // GET ONE
+  // GET ONE TRANSACTION
   @GetMapping("/{id}")
-  public ResponseEntity<Transaction> getTransactionById(
-      @PathVariable Long id) {
+  public ResponseEntity<Transaction> getTransaction(
+      @PathVariable Long id,
+      Authentication authentication) {
 
-    return ResponseEntity.ok(
-        transactionService.getTransactionById(id));
+    Long userId = (Long) authentication.getPrincipal();
+
+    return transactionService
+        .getTransactionById(id, userId)
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
-  // POST
+  // CREATE TRANSACTION
   @PostMapping
-  public ResponseEntity<Transaction> addTransaction(
-      @RequestBody Transaction transaction) {
+  public ResponseEntity<Transaction> createTransaction(
+      @RequestBody Transaction transaction,
+      Authentication authentication) {
+
+    Long userId = (Long) authentication.getPrincipal();
 
     return ResponseEntity.ok(
-        transactionService.addTransaction(transaction));
+        transactionService.createTransaction(
+            transaction,
+            userId));
   }
 
-  // PUT
+  // UPDATE TRANSACTION
   @PutMapping("/{id}")
   public ResponseEntity<Transaction> updateTransaction(
       @PathVariable Long id,
-      @RequestBody Transaction transaction) {
+      @RequestBody Transaction transaction,
+      Authentication authentication) {
+
+    Long userId = (Long) authentication.getPrincipal();
 
     return ResponseEntity.ok(
         transactionService.updateTransaction(
             id,
-            transaction));
+            transaction,
+            userId));
   }
 
-  // DELETE
+  // DELETE TRANSACTION
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> deleteTransaction(
-      @PathVariable Long id) {
+      @PathVariable Long id,
+      Authentication authentication) {
 
-    transactionService.deleteTransaction(id);
+    Long userId = (Long) authentication.getPrincipal();
+
+    transactionService.deleteTransaction(id, userId);
 
     return ResponseEntity.noContent().build();
   }

@@ -45,7 +45,8 @@ import {
   Legend,
 } from "recharts";
 
-const API_URL = "https://finsight-mm3b.onrender.com/api";
+//const API_URL = "https://finsight-mm3b.onrender.com/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 
 /* =========================================================
    APP
@@ -64,13 +65,15 @@ function App() {
 
   const [showRegister, setShowRegister] = useState(false);
 
-  const handleLogin = (loggedInUser) => {
+  const handleLogin = (loggedInUser, token) => {
     localStorage.setItem("financehub_user", JSON.stringify(loggedInUser));
+    localStorage.setItem("financehub_token", token);
     setUser(loggedInUser);
   };
 
   const handleLogout = () => {
     localStorage.removeItem("financehub_user");
+    localStorage.removeItem("financehub_token");
     setUser(null);
   };
 
@@ -148,7 +151,7 @@ function AuthPage({ showRegister, setShowRegister, onLogin }) {
           setMessage("");
         }, 1000);
       } else {
-        onLogin(data.user);
+        onLogin(data.user, data.token);
 
         setEmail("");
         setPassword("");
@@ -396,7 +399,18 @@ function Dashboard({ user, onLogout }) {
     try {
       setLoading(true);
 
-      const response = await fetch(`${API_URL}/transactions`);
+      if (!user?.id) {
+        setTransactions([]);
+        return;
+      }
+
+      const token = localStorage.getItem("financehub_token");
+
+      const response = await fetch(`${API_URL}/transactions`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) {
         throw new Error("Failed to load transactions.");
@@ -414,7 +428,7 @@ function Dashboard({ user, onLogout }) {
 
   useEffect(() => {
     fetchTransactions();
-  }, []);
+  }, [user?.id]);
 
   /* =====================================================
      CALCULATIONS
@@ -586,6 +600,7 @@ function Dashboard({ user, onLogout }) {
         method: isEdit ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("financehub_token")}`,
         },
         body: JSON.stringify({
           amount: Number(form.amount),
@@ -635,6 +650,9 @@ function Dashboard({ user, onLogout }) {
     try {
       const response = await fetch(`${API_URL}/transactions/${id}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("financehub_token")}`,
+        },
       });
 
       if (!response.ok) {

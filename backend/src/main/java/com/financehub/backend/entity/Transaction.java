@@ -4,6 +4,11 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
+
+import com.financehub.backend.entity.User;
+
 @Entity
 @Table(name = "transactions")
 public class Transaction {
@@ -27,6 +32,11 @@ public class Transaction {
   @Column(nullable = false)
   private LocalDate date;
 
+  @JsonIgnore
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id")
+  private User user;
+
   public Transaction() {
   }
 
@@ -37,6 +47,7 @@ public class Transaction {
       String type,
       String description,
       LocalDate date) {
+
     this.id = id;
     this.amount = amount;
     this.category = category;
@@ -91,5 +102,13 @@ public class Transaction {
 
   public void setDate(LocalDate date) {
     this.date = date;
+  }
+
+  public User getUser() {
+    return user;
+  }
+
+  public void setUser(User user) {
+    this.user = user;
   }
 }

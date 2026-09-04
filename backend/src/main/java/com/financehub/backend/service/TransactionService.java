@@ -1,79 +1,78 @@
 package com.financehub.backend.service;
 
 import com.financehub.backend.entity.Transaction;
+import com.financehub.backend.entity.User;
 import com.financehub.backend.repository.TransactionRepository;
+import com.financehub.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class TransactionService {
 
   private final TransactionRepository transactionRepository;
+  private final UserRepository userRepository;
 
   public TransactionService(
-      TransactionRepository transactionRepository) {
+      TransactionRepository transactionRepository,
+      UserRepository userRepository) {
+
     this.transactionRepository = transactionRepository;
+    this.userRepository = userRepository;
   }
 
-  // GET ALL
-  public List<Transaction> getAllTransactions() {
-    return transactionRepository.findAll();
+  public List<Transaction> getTransactionsByUser(Long userId) {
+    return transactionRepository.findByUserId(userId);
   }
 
-  // GET BY ID
-  public Transaction getTransactionById(Long id) {
+  public Transaction createTransaction(
+      Transaction transaction,
+      Long userId) {
 
-    return transactionRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException(
-            "Transaction not found with id: " + id));
-  }
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new RuntimeException("User not found"));
 
-  // ADD
-  public Transaction addTransaction(Transaction transaction) {
-
-    transaction.setId(null);
+    transaction.setUser(user);
 
     return transactionRepository.save(transaction);
   }
 
-  // UPDATE
-  public Transaction updateTransaction(
+  public Optional<Transaction> getTransactionById(
       Long id,
-      Transaction updatedTransaction) {
+      Long userId) {
 
-    Transaction existingTransaction = transactionRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException(
-            "Transaction not found with id: " + id));
-
-    existingTransaction.setAmount(
-        updatedTransaction.getAmount());
-
-    existingTransaction.setCategory(
-        updatedTransaction.getCategory());
-
-    existingTransaction.setType(
-        updatedTransaction.getType());
-
-    existingTransaction.setDescription(
-        updatedTransaction.getDescription());
-
-    existingTransaction.setDate(
-        updatedTransaction.getDate());
-
-    return transactionRepository.save(
-        existingTransaction);
+    return transactionRepository
+        .findByIdAndUserId(id, userId);
   }
 
-  // DELETE
-  public void deleteTransaction(Long id) {
+  public Transaction updateTransaction(
+      Long id,
+      Transaction updatedTransaction,
+      Long userId) {
 
-    if (!transactionRepository.existsById(id)) {
+    Transaction existing = transactionRepository
+        .findByIdAndUserId(id, userId)
+        .orElseThrow(() -> new RuntimeException("Transaction not found"));
 
-      throw new RuntimeException(
-          "Transaction not found with id: " + id);
-    }
+    existing.setAmount(updatedTransaction.getAmount());
+    existing.setCategory(updatedTransaction.getCategory());
+    existing.setType(updatedTransaction.getType());
+    existing.setDescription(updatedTransaction.getDescription());
+    existing.setDate(updatedTransaction.getDate());
 
-    transactionRepository.deleteById(id);
+    return transactionRepository.save(existing);
+  }
+
+  public void deleteTransaction(
+      Long id,
+      Long userId) {
+
+    Transaction transaction = transactionRepository
+        .findByIdAndUserId(id, userId)
+        .orElseThrow(() -> new RuntimeException("Transaction not found"));
+
+    transactionRepository.delete(transaction);
   }
 }

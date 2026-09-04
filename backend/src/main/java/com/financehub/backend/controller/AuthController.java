@@ -1,9 +1,13 @@
+
 package com.financehub.backend.controller;
 
 import com.financehub.backend.entity.User;
 import com.financehub.backend.repository.UserRepository;
+import com.financehub.backend.security.JwtService;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -11,13 +15,24 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "https://shivamyadav153.github.io"
+})
 public class AuthController {
 
   private final UserRepository userRepository;
+  private final JwtService jwtService;
+  private final PasswordEncoder passwordEncoder;
 
-  public AuthController(UserRepository userRepository) {
+  public AuthController(
+      UserRepository userRepository,
+      JwtService jwtService,
+      PasswordEncoder passwordEncoder) {
+
     this.userRepository = userRepository;
+    this.jwtService = jwtService;
+    this.passwordEncoder = passwordEncoder;
   }
 
   // =========================
@@ -27,27 +42,45 @@ public class AuthController {
   @PostMapping("/register")
   public ResponseEntity<?> register(@RequestBody User user) {
 
-    if (user.getName() == null || user.getName().trim().isEmpty()) {
+    // Name validation
+    if (user.getName() == null ||
+        user.getName().trim().isEmpty()) {
+
       return ResponseEntity.badRequest()
-          .body(Map.of("message", "Name is required"));
+          .body(Map.of(
+              "message",
+              "Name is required"));
     }
 
-    if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+    // Email validation
+    if (user.getEmail() == null ||
+        user.getEmail().trim().isEmpty()) {
+
       return ResponseEntity.badRequest()
-          .body(Map.of("message", "Email is required"));
+          .body(Map.of(
+              "message",
+              "Email is required"));
     }
 
-    if (user.getPassword() == null || user.getPassword().length() < 6) {
+    // Password validation
+    if (user.getPassword() == null ||
+        user.getPassword().length() < 6) {
+
       return ResponseEntity.badRequest()
           .body(Map.of(
               "message",
               "Password must be at least 6 characters"));
     }
 
-    String email = user.getEmail().trim().toLowerCase();
+    String email = user.getEmail()
+        .trim()
+        .toLowerCase();
 
+    // Check duplicate email
     if (userRepository.existsByEmail(email)) {
-      return ResponseEntity.status(HttpStatus.CONFLICT)
+
+      return ResponseEntity
+          .status(HttpStatus.CONFLICT)
           .body(Map.of(
               "message",
               "Email already registered"));
@@ -55,8 +88,16 @@ public class AuthController {
 
     user.setEmail(email);
 
+    // IMPORTANT:
+    // Password ko BCrypt hash mein convert karna
+    String hashedPassword = passwordEncoder.encode(user.getPassword());
+
+    user.setPassword(hashedPassword);
+
+    // Save user
     User savedUser = userRepository.save(user);
 
+    // Password frontend ko nahi bhejna
     Map<String, Object> userResponse = new HashMap<>();
 
     userResponse.put("id", savedUser.getId());
@@ -65,8 +106,13 @@ public class AuthController {
 
     Map<String, Object> response = new HashMap<>();
 
-    response.put("message", "Registration successful");
-    response.put("user", userResponse);
+    response.put(
+        "message",
+        "Registration successful");
+
+    response.put(
+        "user",
+        userResponse);
 
     return ResponseEntity
         .status(HttpStatus.CREATED)
@@ -78,8 +124,10 @@ public class AuthController {
   // =========================
 
   @PostMapping("/login")
-  public ResponseEntity<?> login(@RequestBody User loginUser) {
+  public ResponseEntity<?> login(
+      @RequestBody User loginUser) {
 
+    // Email validation
     if (loginUser.getEmail() == null ||
         loginUser.getEmail().trim().isEmpty()) {
 
@@ -89,6 +137,7 @@ public class AuthController {
               "Email is required"));
     }
 
+    // Password validation
     if (loginUser.getPassword() == null ||
         loginUser.getPassword().isEmpty()) {
 
@@ -102,20 +151,12 @@ public class AuthController {
         .trim()
         .toLowerCase();
 
+    // Find user
     User user = userRepository
         .findByEmail(email)
         .orElse(null);
 
     if (user == null) {
-      return ResponseEntity
-          .status(HttpStatus.UNAUTHORIZED)
-          .body(Map.of(
-              "message",
-              "Invalid email or password"));
-    }
-
-    if (!user.getPassword()
-        .equals(loginUser.getPassword())) {
 
       return ResponseEntity
           .status(HttpStatus.UNAUTHORIZED)
@@ -124,16 +165,47 @@ public class AuthController {
               "Invalid email or password"));
     }
 
+    // IMPORTANT:
+    // BCrypt password check
+    boolean passwordMatches = passwordEncoder.matches(
+        loginUser.getPassword(),
+        user.getPassword());
+
+    if (!passwordMatches) {
+
+      return ResponseEntity
+          .status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of(
+              "message",
+              "Invalid email or password"));
+    }
+
+    // User response
     Map<String, Object> userResponse = new HashMap<>();
 
     userResponse.put("id", user.getId());
     userResponse.put("name", user.getName());
     userResponse.put("email", user.getEmail());
 
+    // Generate JWT
+    String token = jwtService.generateToken(
+        user.getId(),
+        user.getEmail());
+
+    // Final response
     Map<String, Object> response = new HashMap<>();
 
-    response.put("message", "Login successful");
-    response.put("user", userResponse);
+    response.put(
+        "message",
+        "Login successful");
+
+    response.put(
+        "token",
+        token);
+
+    response.put(
+        "user",
+        userResponse);
 
     return ResponseEntity.ok(response);
   }
